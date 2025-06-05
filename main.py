@@ -1,9 +1,10 @@
-# streamlit_app.py
-import streamlit as st
+import numpy as np
 import pandas as pd
 import plotly.express as px
-
-trends_df = pd.read_csv("memecoin_trends.csv")
+import plotly.graph_objects as go
+import streamlit as st
+# Load helper functions
+from helper import load_trends_data, load_sentiment_data
 
 st.set_page_config(page_title="Memecoin Sentiment & Price Analytics", layout="wide")
 
@@ -36,10 +37,6 @@ if page == "Overview":
 
 elif page == "1. Sentiment Analysis":
     # Load sentiment data
-    @st.cache_data
-    def load_sentiment_data():
-        return pd.read_csv("memecoin_sentiment_huggingface.csv", parse_dates=["Timestamp"])
-    
     sentiment_df = load_sentiment_data()
 
     st.title("📊 Sentiment Analysis of Social Media Posts")
@@ -120,11 +117,100 @@ elif page == "1. Sentiment Analysis":
         st.error(f"{row['Sentiment_Score']:.2f}: {row['Original_Text'][:200]}")
 
 elif page == "2. Search Trends":
-    st.title("📈 Google Trends Search Analysis")
+    st.title("📈 Search Trends Analysis")
     st.markdown("Analyzing search interest for selected memecoins over time.")
-    # Line chart: Search Score over time
-    # Option to compare multiple keywords
-    # Display spikes in trend and annotate with sentiment scores or events
+
+    trends_df = load_trends_data()
+    sentiment_df = load_sentiment_data()
+
+    # Sidebar keyword filter
+    keywords = sorted(trends_df["Keyword"].unique())
+    selected_keywords = st.multiselect("Select Keywords to Compare", keywords, default=keywords[:2])
+
+    # Date range slider
+    min_date = trends_df["Date"].min().date()
+    max_date = trends_df["Date"].max().date()
+    date_range = st.slider(
+        "Select Date Range",
+        min_value=min_date,
+        max_value=max_date,
+        value=(min_date, max_date)
+    )
+
+    filtered_df = trends_df[
+        (trends_df["Keyword"].isin(selected_keywords)) &
+        (trends_df["Date"].between(pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])))
+    ]
+
+    st.subheader("📈 Search Interest Over Time")
+
+    # Rolling average toggle
+    show_rolling = st.checkbox("Show 7-day Rolling Average", value=True)
+
+    # Apply rolling average
+    if show_rolling:
+        smoothed_df = (
+            filtered_df.sort_values("Date")
+            .groupby("Keyword")
+            .apply(lambda x: x.assign(Rolling_Score=x["Search_Score"].rolling(window=7, min_periods=1).mean()))
+            .reset_index(drop=True)
+        )
+        y_col = "Rolling_Score"
+    else:
+        smoothed_df = filtered_df
+        y_col = "Search_Score"
+
+    # Line plot
+    fig = px.line(
+        smoothed_df,
+        x="Date",
+        y=y_col,
+        color="Keyword",
+        markers=True,
+        title="Google Trends Search Score by Keyword"
+    )
+    fig.update_layout(xaxis_title="Date", yaxis_title=y_col.replace("_", " ").title())
+
+    if not show_rolling:
+        # Spike Detection & Annotation
+        spikes = []
+        for kw in selected_keywords:
+            subset = smoothed_df[smoothed_df["Keyword"] == kw]
+            threshold = np.percentile(subset["Search_Score"], 95)
+            spike_points = subset[subset["Search_Score"] > threshold]
+            spikes.append(spike_points)
+
+        spike_df = pd.concat(spikes) if spikes else pd.DataFrame()
+
+        for _, row in spike_df.iterrows():
+            fig.add_annotation(
+                x=row["Date"],
+                y=row["Search_Score"],
+                text=f"Spike: {row['Keyword']}",
+                showarrow=True,
+                arrowhead=1,
+                yshift=10
+            )
+            # date_value = pd.Timestamp(row["Date"]).timestamp() * 1000 if isinstance(row["Date"], (pd.Timestamp, np.datetime64)) else row["Date"]
+            # fig.add_vline(
+            #     x=date_value,
+            #     line_dash="solid",
+            #     line_width=1,
+            #     line_color="red",
+            #     opacity=0.6,
+            #     annotation=dict(
+            #         # text=f"Spike: {row['Keyword']}",
+            #         font=dict(color="red"),
+            #         showarrow=True,
+            #         arrowhead=2,
+            #         ax=0,
+            #         ay=-40
+            #     ),
+            #     # annotation_text=f"📈 {row['Keyword']}",
+            #     annotation_position="top left"
+            # )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 elif page == "3. Price Correlation":
     st.title("🔗 Sentiment & Trend Correlation with Price")
