@@ -3,10 +3,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Load the uploaded CSV files
-sentiment_df = pd.read_csv("memecoin_sentiment_huggingface.csv")
-sentiment_df["Timestamp"] = pd.to_datetime(sentiment_df["Timestamp"])
-
 trends_df = pd.read_csv("memecoin_trends.csv")
 
 st.set_page_config(page_title="Memecoin Sentiment & Price Analytics", layout="wide")
@@ -39,6 +35,9 @@ if page == "Overview":
     """)
 
 elif page == "1. Sentiment Analysis":
+    sentiment_df = pd.read_csv("memecoin_sentiment_huggingface.csv")
+    sentiment_df["Timestamp"] = pd.to_datetime(sentiment_df["Timestamp"])
+
     st.title("📊 Sentiment Analysis of Social Media Posts")
     st.markdown("Sentiment classification (Positive / Neutral / Negative) of posts related to specific memecoins.")
 
@@ -52,14 +51,21 @@ elif page == "1. Sentiment Analysis":
 
     # Filter data
     if not selected_keywords:
-        # If no keywords are selected, show all data
         selected_keywords = keywords
 
+    # Sentiment type filter
+    sentiment_labels = ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+    selected_labels = st.multiselect("Filter by Sentiment Type", sentiment_labels, default=sentiment_labels)
+
+    # Filter the DataFrame based on user selections
     filtered_df = sentiment_df[
         (sentiment_df["Keyword"].isin(selected_keywords)) &
         (sentiment_df["Timestamp"] >= pd.to_datetime(start_date)) &
         (sentiment_df["Timestamp"] <= pd.to_datetime(end_date))
     ]
+
+    # Apply sentiment filter
+    filtered_df = filtered_df[filtered_df["Label"].isin(selected_labels)]
 
     if filtered_df.empty:
         st.warning("No data available for the selected filters.")
@@ -82,16 +88,20 @@ elif page == "1. Sentiment Analysis":
     )
     st.plotly_chart(pie_fig, use_container_width=True)
 
-    # Time-Series Line Plot
+    # Time-series line plot: Sentiment over time, one line per keyword
     st.markdown("### 📈 Sentiment Score Over Time")
-    line_df = filtered_df.resample('D', on='Timestamp').mean(numeric_only=True).reset_index()
+    line_df = filtered_df.copy()
+    line_df = line_df.groupby(["Timestamp", "Keyword"]).agg({"Sentiment_Score": "mean"}).reset_index()
+
     line_fig = px.line(
         line_df,
         x="Timestamp",
         y="Sentiment_Score",
+        color="Keyword",  # Split lines by keyword
         markers=True,
-        title=f"Average Daily Sentiment Score for {title_kw}"
+        title="Average Daily Sentiment Score by Keyword"
     )
+    line_fig.update_layout(xaxis_title="Date", yaxis_title="Average Sentiment Score")
     st.plotly_chart(line_fig, use_container_width=True)
 
     # Top Positive and Negative Posts
