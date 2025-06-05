@@ -1,113 +1,145 @@
-import ccxt
-import numpy as np
-import pandas as pd
+# streamlit_app.py
 import streamlit as st
-import ta
-from keras.layers import LSTM, Dense
-from keras.models import Sequential
-from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
+import plotly.express as px
 
-st.set_page_config(page_title="Memecoin Mania", layout="wide")
+# Load the uploaded CSV files
+sentiment_df = pd.read_csv("memecoin_sentiment_huggingface.csv")
+sentiment_df["Timestamp"] = pd.to_datetime(sentiment_df["Timestamp"])
 
-# ---------------------- Sidebar Config ----------------------
-st.sidebar.title("⚙️ Configuration")
+trends_df = pd.read_csv("memecoin_trends.csv")
 
-symbol = st.sidebar.selectbox("Choose Memecoin", ["DOGE/USDT", "SHIB/USDT", "PEPE/USDT"])
-timeframe = st.sidebar.selectbox("Timeframe", ["1h", "4h", "1d"])
-limit = st.sidebar.slider("Data Points", 100, 1000, 500)
+st.set_page_config(page_title="Memecoin Sentiment & Price Analytics", layout="wide")
 
-look_back = st.sidebar.slider("LSTM Look-back Window", 10, 100, 60)
-future_steps = st.sidebar.slider("LSTM Future Steps", 1, 50, 10)
-epochs = st.sidebar.slider("LSTM Epochs", 5, 100, 20)
+# Sidebar navigation
+st.sidebar.title("Dashboard Navigation")
+page = st.sidebar.radio("Go to", [
+    "Overview",
+    "1. Sentiment Analysis",
+    "2. Search Trends",
+    "3. Price Correlation",
+    "4. Price Prediction",
+    "5. Memecoins vs Traditional Coins",
+    "6. Raw Data Explorer"
+])
 
-
-# ---------------------- Data Fetching ----------------------
-@st.cache_data(show_spinner=False)
-def fetch_data(symbol, timeframe, limit):
-    exchange = ccxt.bingx()
-    ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
-    df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-    df.set_index('timestamp', inplace=True)
-    return df
-
-df = fetch_data(symbol, timeframe, limit)
-
-
-# ---------------------- Tabs ----------------------
-tab1, tab2, tab3, tab4 = st.tabs(["📈 Price Chart", "📊 Technical Indicators", "🔮 LSTM Prediction", "🧠 Insights"])
-
-
-# ---------------------- Tab 1: Price Chart ----------------------
-with tab1:
-    st.header("📈 Historical Close Price")
-    st.line_chart(df['close'])
-    st.write(df.tail())
-
-
-# ---------------------- Tab 2: Technical Indicators ----------------------
-with tab2:
-    st.header("📊 Technical Indicators")
-
-    df['SMA_20'] = df['close'].rolling(window=20).mean()
-    df['RSI'] = ta.momentum.RSIIndicator(close=df['close']).rsi()
-
-    ind_tab1, ind_tab2 = st.tabs(["SMA (20)", "RSI"])
-
-    with ind_tab1:
-        st.subheader("Simple Moving Average (20)")
-        st.line_chart(df[['close', 'SMA_20']].dropna())
-
-    with ind_tab2:
-        st.subheader("Relative Strength Index")
-        st.line_chart(df[['RSI']].dropna())
-
-
-# ---------------------- Tab 3: LSTM Prediction ----------------------
-with tab3:
-    st.header("🔮 LSTM Price Prediction")
-
-    close_prices = df[['close']].values
-    scaler = MinMaxScaler()
-    scaled = scaler.fit_transform(close_prices)
-
-    X, y = [], []
-    for i in range(len(scaled) - look_back - future_steps):
-        X.append(scaled[i:i + look_back])
-        y.append(scaled[i + look_back:i + look_back + future_steps, 0])
-    X, y = np.array(X), np.array(y)
-
-    if len(X) == 0:
-        st.warning("Not enough data for training. Increase limit or reduce look-back.")
-    else:
-        model = Sequential([
-            LSTM(50, return_sequences=True, input_shape=(look_back, 1)),
-            LSTM(50),
-            Dense(future_steps)
-        ])
-        model.compile(optimizer='adam', loss='mse')
-        model.fit(X, y, epochs=epochs, batch_size=32, verbose=0)
-
-        last_sequence = scaled[-look_back:]
-        prediction = model.predict(np.expand_dims(last_sequence, axis=0))[0]
-        prediction_rescaled = scaler.inverse_transform(prediction.reshape(-1, 1)).flatten()
-
-        future_dates = pd.date_range(start=df.index[-1], periods=future_steps + 1, freq='1H')[1:]
-        prediction_df = pd.DataFrame({'Predicted Close': prediction_rescaled}, index=future_dates)
-
-        st.subheader("📊 Predicted Future Prices")
-        st.line_chart(prediction_df)
-
-
-# ---------------------- Tab 4: Insights ----------------------
-with tab4:
-    st.header("🧠 Key Insights")
+# Render different pages
+if page == "Overview":
+    st.title("🚀 Memecoin Sentiment & Price Prediction Dashboard")
     st.markdown("""
-- **Price Patterns**: Visualize how memecoins behave over time.
-- **Indicators**: RSI reveals overbought/oversold zones; SMA shows smoothed trends.
-- **LSTM**: Works surprisingly well despite memecoins' chaotic nature—short-term signals are still learnable!
-- **Dashboard Use**: Use this for interactive presentations, rapid exploration, and live updates from crypto exchanges.
+    Welcome to the **Memecoin Analytics Dashboard**!
+    This dashboard presents a comprehensive analysis pipeline for memecoins:
 
----  
-*Created with ❤️ by G5*
-""")
+    1. **Sentiment Analysis** of social media posts
+    2. **Google Trends** search interest
+    3. **Correlation** of sentiment and search trends with price
+    4. **Forecasting** future prices using LSTM & HMM models
+    5. **Comparing** memecoins and traditional cryptocurrencies
+    6. **Exploring Raw Data** in one place
+    """)
+
+elif page == "1. Sentiment Analysis":
+    st.title("📊 Sentiment Analysis of Social Media Posts")
+    st.markdown("Sentiment classification (Positive / Neutral / Negative) of posts related to specific memecoins.")
+
+    # Sidebar filters
+    st.subheader("🔍 Filters")
+    keywords = sorted(sentiment_df["Keyword"].unique().tolist())
+    selected_keywords = st.multiselect("Select Keyword(s)", keywords, default=keywords[:0])
+
+    min_date, max_date = sentiment_df["Timestamp"].min(), sentiment_df["Timestamp"].max()
+    start_date, end_date = st.date_input("Select Time Range", [min_date, max_date], min_value=min_date, max_value=max_date)
+
+    # Filter data
+    if not selected_keywords:
+        # If no keywords are selected, show all data
+        selected_keywords = keywords
+
+    filtered_df = sentiment_df[
+        (sentiment_df["Keyword"].isin(selected_keywords)) &
+        (sentiment_df["Timestamp"] >= pd.to_datetime(start_date)) &
+        (sentiment_df["Timestamp"] <= pd.to_datetime(end_date))
+    ]
+
+    if filtered_df.empty:
+        st.warning("No data available for the selected filters.")
+        st.stop()
+
+    # Sentiment Distribution Pie Chart
+    title_kw = ", ".join(selected_keywords) if selected_keywords else "Selected Keywords"
+    sentiment_colors = {
+        "POSITIVE": "#66c2a5",
+        "NEGATIVE": "#fc8d62",
+        "NEUTRAL": "#8da0cb"
+    }
+    pie_fig = px.pie(
+        filtered_df,
+        names="Label",
+        title=f"Sentiment Distribution for {title_kw}",
+        hole=0.4,
+        color="Label",
+        color_discrete_map=sentiment_colors
+    )
+    st.plotly_chart(pie_fig, use_container_width=True)
+
+    # Time-Series Line Plot
+    st.markdown("### 📈 Sentiment Score Over Time")
+    line_df = filtered_df.resample('D', on='Timestamp').mean(numeric_only=True).reset_index()
+    line_fig = px.line(
+        line_df,
+        x="Timestamp",
+        y="Sentiment_Score",
+        markers=True,
+        title=f"Average Daily Sentiment Score for {title_kw}"
+    )
+    st.plotly_chart(line_fig, use_container_width=True)
+
+    # Top Positive and Negative Posts
+    st.markdown("### 🔼 Top 5 Positive Posts")
+    top_pos = filtered_df.nlargest(5, "Sentiment_Score")[["Sentiment_Score", "Original_Text"]]
+    for i, row in top_pos.iterrows():
+        st.success(f"{row['Sentiment_Score']:.2f}: {row['Original_Text'][:200]}")
+
+    st.markdown("### 🔽 Top 5 Negative Posts")
+    top_neg = filtered_df.nsmallest(5, "Sentiment_Score")[["Sentiment_Score", "Original_Text"]]
+    for i, row in top_neg.iterrows():
+        st.error(f"{row['Sentiment_Score']:.2f}: {row['Original_Text'][:200]}")
+
+elif page == "2. Search Trends":
+    st.title("📈 Google Trends Search Analysis")
+    st.markdown("Analyzing search interest for selected memecoins over time.")
+    # Line chart: Search Score over time
+    # Option to compare multiple keywords
+    # Display spikes in trend and annotate with sentiment scores or events
+
+elif page == "3. Price Correlation":
+    st.title("🔗 Sentiment & Trend Correlation with Price")
+    st.markdown("Correlating sentiment scores and Google Trends data with historical price movement.")
+    # Correlation heatmap or scatter plots
+    # Cross-correlation time-lag analysis
+    # Include regression line or correlation coefficient
+
+elif page == "4. Price Prediction":
+    st.title("🔮 Forecasting Price with LSTM and HMM")
+    st.markdown("Comparing model predictions for future price movement.")
+    model_type = st.selectbox("Select Model", ["LSTM", "HMM"])
+    # Line plot of actual vs predicted prices
+    # Display evaluation metrics: RMSE, MAPE, etc.
+    # Option to view prediction confidence intervals
+
+elif page == "5. Memecoins vs Traditional Coins":
+    st.title("⚖️ Memecoins vs Traditional Coins")
+    st.markdown("Comparing price behavior and volatility between memecoins and established cryptocurrencies.")
+    # Side-by-side line charts or candlestick charts
+    # Volatility comparison (std dev)
+    # Performance index or ROI
+
+elif page == "6. Raw Data Explorer":
+    st.title("🧾 Raw Data Viewer")
+    st.markdown("View and filter all raw datasets used in this project.")
+    # Tabs for:
+    # - Sentiment Data
+    # - Search Trend Data
+    # - Price Data
+    # Filtering options (date range, keyword, sentiment type)
+
