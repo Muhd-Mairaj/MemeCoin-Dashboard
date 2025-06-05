@@ -35,8 +35,12 @@ if page == "Overview":
     """)
 
 elif page == "1. Sentiment Analysis":
-    sentiment_df = pd.read_csv("memecoin_sentiment_huggingface.csv")
-    sentiment_df["Timestamp"] = pd.to_datetime(sentiment_df["Timestamp"])
+    # Load sentiment data
+    @st.cache_data
+    def load_sentiment_data():
+        return pd.read_csv("memecoin_sentiment_huggingface.csv", parse_dates=["Timestamp"])
+    
+    sentiment_df = load_sentiment_data()
 
     st.title("📊 Sentiment Analysis of Social Media Posts")
     st.markdown("Sentiment classification (Positive / Neutral / Negative) of posts related to specific memecoins.")
