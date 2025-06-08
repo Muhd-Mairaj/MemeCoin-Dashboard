@@ -1,16 +1,15 @@
-import pandas as pd
+import os
+from datetime import datetime, timedelta
+
 import ccxt
 import numpy as np
-from datetime import datetime, timedelta
-import os
+import pandas as pd
+import streamlit as st
 
+@st.cache_data
 def load_sentiment_data():
     """Load sentiment data from CSV file"""
     file_path = "memecoin_sentiment_huggingface.csv"
-    if not os.path.exists(file_path):
-        # Fallback to sample data
-        file_path = "../sample_memecoin_sentiment_huggingface.csv"
-    
     try:
         df = pd.read_csv(file_path)
         # Ensure proper column names and types
@@ -38,16 +37,12 @@ def load_sentiment_data():
         print(f"Warning: Could not load sentiment data: {e}")
         return create_sample_sentiment_data()
 
+@st.cache_data
 def load_trends_data():
     """Load Google Trends data from CSV file"""
     file_path = "memecoin_trends.csv"
-    if not os.path.exists(file_path):
-        # Fallback to sample data
-        file_path = "../sample_memecoin_trends.csv"
-    
     try:
-        df = pd.read_csv(file_path)
-        df['Date'] = pd.to_datetime(df['Date'])
+        df = pd.read_csv(file_path, parse_dates=['Date'])
         return df
     except Exception as e:
         print(f"Warning: Could not load trends data: {e}")
