@@ -48,7 +48,7 @@ elif page == "1. Sentiment Analysis":
     selected_keywords = st.multiselect("Select Keyword(s)", keywords, default=keywords[:0])
 
     min_date, max_date = sentiment_df["Timestamp"].min(), sentiment_df["Timestamp"].max()
-    start_date, end_date = st.date_input("Select Time Range", [min_date, max_date], min_value=min_date, max_value=max_date)
+    start_date, end_date = st.date_input("Select Time Range", [pd.Timestamp("2025-04-01").date(), max_date], min_value=min_date, max_value=max_date)
 
     # Filter data
     if not selected_keywords:
