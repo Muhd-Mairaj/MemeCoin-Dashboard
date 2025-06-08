@@ -53,10 +53,9 @@ def load_trends_data():
         print(f"Warning: Could not load trends data: {e}")
         return create_sample_trends_data()
 
-import ccxt
 def get_crypto_data_ccxt(symbol='DOGE/USDT', exchange_name='binance', timeframe='1d', limit=100):
     """
-    Fetch cryptocurrency data using ccxt
+    Fetch cryptocurrency data using ccxt with proper date handling
     """
     try:
         exchange = ccxt.bingx()
@@ -66,7 +65,8 @@ def get_crypto_data_ccxt(symbol='DOGE/USDT', exchange_name='binance', timeframe=
         
         # Convert to DataFrame
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        print(df)
+        print(f"Fetched {len(df)} records for {symbol}")
+        
         df['Date'] = pd.to_datetime(df['timestamp'], unit='ms')
         df = df.drop('timestamp', axis=1)
         
@@ -74,10 +74,14 @@ def get_crypto_data_ccxt(symbol='DOGE/USDT', exchange_name='binance', timeframe=
         df.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'Date']
         df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
         
+        # Ensure Date column is datetime
+        df['Date'] = pd.to_datetime(df['Date'])
+        
         return df
         
     except Exception as e:
         print(f"Error fetching data from {exchange_name}: {e}")
+        print("Using fallback data...")
         return create_sample_price_data_fallback()
 
 def create_sample_sentiment_data():
@@ -122,10 +126,15 @@ def create_sample_trends_data():
     return pd.DataFrame(data)
 
 def create_sample_price_data_fallback():
-    """Create fallback sample price data"""
-    dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
+    """Create fallback sample price data with date alignment"""
+    # Use consistent date range
+    start_date = '2024-05-19'  # Match the trends data start
+    end_date = '2025-05-25'    # Match the trends data end
+    
+    dates = pd.date_range(start=start_date, end=end_date, freq='D')
     
     # Generate realistic price data with random walk
+    np.random.seed(42)  # Fixed seed for reproducibility
     initial_price = 0.1
     prices = [initial_price]
     

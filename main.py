@@ -229,68 +229,179 @@ elif page == "3. Price Correlation":
     price_df = create_sample_price_data(sentiment_df, trends_df)
     combined_df = combine_all_data(price_df, sentiment_df, trends_df)
     
-    # Calculate correlations
-    correlation_data = combined_df[['Close', 'Sentiment_Score', 'Search_Score']].corr()
+    print("Combined: ", combined_df.count())
     
-    # Display correlation heatmap
-    st.subheader("📊 Correlation Matrix")
-    fig_corr = px.imshow(correlation_data, 
-                        text_auto=True, 
-                        aspect="auto",
-                        title="Correlation between Price, Sentiment, and Search Trends",
-                        color_continuous_scale="RdBu_r")
-    st.plotly_chart(fig_corr, use_container_width=True)
-    
-    # Scatter plots
-    col1, col2 = st.columns(2)
+    # Check for NaN values and data alignment
+    st.subheader("📊 Data Quality Check")
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.subheader("💰 Price vs Sentiment")
-        fig_scatter1 = px.scatter(combined_df, 
-                                 x='Sentiment_Score', 
-                                 y='Close',
-                                 trendline="ols",
-                                 title="Price vs Sentiment Score")
-        st.plotly_chart(fig_scatter1, use_container_width=True)
+        total_rows = len(combined_df)
+        st.metric("Total Records", total_rows)
     
     with col2:
-        st.subheader("🔍 Price vs Search Trends")
-        fig_scatter2 = px.scatter(combined_df, 
-                                 x='Search_Score', 
-                                 y='Close',
-                                 trendline="ols",
-                                 title="Price vs Search Score")
-        st.plotly_chart(fig_scatter2, use_container_width=True)
+        valid_sentiment = combined_df['Sentiment_Mean'].notna().sum()
+        st.metric("Valid Sentiment", f"{valid_sentiment}/{total_rows}")
     
-    # Time series comparison
-    st.subheader("📈 Time Series Comparison")
+    with col3:
+        valid_trends = combined_df['Trends_Mean'].notna().sum()
+        st.metric("Valid Trends", f"{valid_trends}/{total_rows}")
     
-    # Normalize data for comparison
-    normalized_df = combined_df.copy()
-    for col in ['Close', 'Sentiment_Score', 'Search_Score']:
-        normalized_df[f'{col}_norm'] = (normalized_df[col] - normalized_df[col].min()) / (normalized_df[col].max() - normalized_df[col].min())
+    # Show data availability
+    st.subheader("📈 Data Availability Timeline")
+    availability_df = combined_df[['Date', 'Close', 'Sentiment_Mean', 'Trends_Mean']].copy()
+    availability_df['Has_Sentiment'] = availability_df['Sentiment_Mean'].notna()
+    availability_df['Has_Trends'] = availability_df['Trends_Mean'].notna()
     
-    fig_time = go.Figure()
-    fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                 y=normalized_df['Close_norm'], 
-                                 mode='lines', 
-                                 name='Price (Normalized)',
-                                 line=dict(color='blue')))
-    fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                 y=normalized_df['Sentiment_Score_norm'], 
-                                 mode='lines', 
-                                 name='Sentiment (Normalized)',
-                                 line=dict(color='green')))
-    fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                 y=normalized_df['Search_Score_norm'], 
-                                 mode='lines', 
-                                 name='Search Trends (Normalized)',
-                                 line=dict(color='red')))
+    fig_avail = go.Figure()
+    fig_avail.add_trace(go.Scatter(
+        x=availability_df['Date'],
+        y=availability_df['Close'],
+        mode='lines',
+        name='Price',
+        line=dict(color='blue')
+    ))
     
-    fig_time.update_layout(title="Normalized Time Series Comparison",
-                          xaxis_title="Date",
-                          yaxis_title="Normalized Value")
-    st.plotly_chart(fig_time, use_container_width=True)
+    # Add markers for data availability
+    sentiment_available = availability_df[availability_df['Has_Sentiment']]
+    if not sentiment_available.empty:
+        fig_avail.add_trace(go.Scatter(
+            x=sentiment_available['Date'],
+            y=sentiment_available['Close'],
+            mode='markers',
+            name='Has Sentiment Data',
+            marker=dict(color='green', size=3),
+            yaxis='y'
+        ))
+    
+    trends_available = availability_df[availability_df['Has_Trends']]
+    if not trends_available.empty:
+        fig_avail.add_trace(go.Scatter(
+            x=trends_available['Date'],
+            y=trends_available['Close'],
+            mode='markers',
+            name='Has Trends Data',
+            marker=dict(color='red', size=3),
+            yaxis='y'
+        ))
+    
+    fig_avail.update_layout(title="Data Availability Over Time", xaxis_title="Date", yaxis_title="Price")
+    st.plotly_chart(fig_avail, use_container_width=True)
+    
+    # Clean data for correlation analysis
+    correlation_df = combined_df[['Close', 'Sentiment_Mean', 'Trends_Mean']].dropna()
+    
+    if len(correlation_df) > 0:
+        # Calculate correlations
+        correlation_data = correlation_df.corr()
+        
+        # Display correlation heatmap
+        st.subheader("📊 Correlation Matrix")
+        st.write(f"Correlation calculated on {len(correlation_df)} complete records")
+        
+        fig_corr = px.imshow(correlation_data, 
+                            text_auto=True, 
+                            aspect="auto",
+                            title="Correlation between Price, Sentiment, and Search Trends",
+                            color_continuous_scale="RdBu_r")
+        st.plotly_chart(fig_corr, use_container_width=True)
+        
+        # Show correlation values
+        st.subheader("📈 Correlation Values")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            price_sentiment_corr = correlation_data.loc['Close', 'Sentiment_Mean']
+            st.metric("Price vs Sentiment", f"{price_sentiment_corr:.4f}")
+            
+        with col2:
+            price_trends_corr = correlation_data.loc['Close', 'Trends_Mean']
+            st.metric("Price vs Search Trends", f"{price_trends_corr:.4f}")
+        
+        # Scatter plots with trendlines
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("💰 Price vs Sentiment")
+            if correlation_df['Sentiment_Mean'].nunique() > 1:
+                fig_scatter1 = px.scatter(correlation_df, 
+                                         x='Sentiment_Mean', 
+                                         y='Close',
+                                         trendline="ols",
+                                         title="Price vs Sentiment Score")
+                st.plotly_chart(fig_scatter1, use_container_width=True)
+            else:
+                st.warning("Insufficient sentiment data variation for scatter plot")
+        
+        with col2:
+            st.subheader("🔍 Price vs Search Trends")
+            if correlation_df['Trends_Mean'].nunique() > 1:
+                fig_scatter2 = px.scatter(correlation_df, 
+                                         x='Trends_Mean', 
+                                         y='Close',
+                                         trendline="ols",
+                                         title="Price vs Search Score")
+                st.plotly_chart(fig_scatter2, use_container_width=True)
+            else:
+                st.warning("Insufficient trends data variation for scatter plot")
+        
+        # Time series comparison with aligned data
+        st.subheader("📈 Time Series Comparison (Aligned Data)")
+        
+        # Use only dates with all data available
+        complete_data = combined_df.dropna(subset=['Close', 'Sentiment_Mean', 'Trends_Mean'])
+        
+        if len(complete_data) > 0:
+            # Normalize data for comparison
+            normalized_df = complete_data.copy()
+            for col in ['Close', 'Sentiment_Mean', 'Trends_Mean']:
+                col_min = normalized_df[col].min()
+                col_max = normalized_df[col].max()
+                if col_max > col_min:
+                    normalized_df[f'{col}_norm'] = (normalized_df[col] - col_min) / (col_max - col_min)
+                else:
+                    normalized_df[f'{col}_norm'] = 0.5  # Set to middle if no variation
+            
+            fig_time = go.Figure()
+            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
+                                         y=normalized_df['Close_norm'], 
+                                         mode='lines', 
+                                         name='Price (Normalized)',
+                                         line=dict(color='blue')))
+            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
+                                         y=normalized_df['Sentiment_Mean_norm'], 
+                                         mode='lines', 
+                                         name='Sentiment (Normalized)',
+                                         line=dict(color='green')))
+            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
+                                         y=normalized_df['Trends_Mean_norm'], 
+                                         mode='lines', 
+                                         name='Search Trends (Normalized)',
+                                         line=dict(color='red')))
+            
+            fig_time.update_layout(title=f"Normalized Time Series Comparison ({len(complete_data)} aligned data points)",
+                                  xaxis_title="Date",
+                                  yaxis_title="Normalized Value")
+            st.plotly_chart(fig_time, use_container_width=True)
+        else:
+            st.warning("No overlapping data points found for time series comparison")
+    
+    else:
+        st.error("No complete data records found for correlation analysis")
+        st.write("Possible issues:")
+        st.write("- Date ranges don't overlap between datasets")
+        st.write("- All sentiment or trends data is NaN")
+        st.write("- Data format issues")
+        
+        # Show debug information
+        st.subheader("🔍 Debug Information")
+        st.write("Price data range:", combined_df['Date'].min(), "to", combined_df['Date'].max())
+        st.write("Non-null sentiment records:", combined_df['Sentiment_Mean'].notna().sum())
+        st.write("Non-null trends records:", combined_df['Trends_Mean'].notna().sum())
+        
+        # Show sample of data
+        st.write("Sample of combined data:")
+        st.dataframe(combined_df[['Date', 'Close', 'Sentiment_Mean', 'Trends_Mean']].head(10))
 
 elif page == "4. Price Prediction":
     st.title("🔮 Price Prediction with ML Models")
