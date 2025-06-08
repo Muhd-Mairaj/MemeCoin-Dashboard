@@ -1,4 +1,6 @@
 Date,Source,Keyword,Search_Score
+2024-05-19,Google Trends,dogecoin,10
+2024-05-26,Google Trends,dogecoin,7
 2024-06-02,Google Trends,dogecoin,6
 2024-06-09,Google Trends,dogecoin,5
 2024-06-16,Google Trends,dogecoin,5
@@ -9,7 +11,7 @@ Date,Source,Keyword,Search_Score
 2024-07-21,Google Trends,dogecoin,6
 2024-07-28,Google Trends,dogecoin,5
 2024-08-04,Google Trends,dogecoin,6
-2024-08-11,Google Trends,dogecoin,5
+2024-08-11,Google Trends,dogecoin,6
 2024-08-18,Google Trends,dogecoin,6
 2024-08-25,Google Trends,dogecoin,6
 2024-09-01,Google Trends,dogecoin,5
@@ -23,43 +25,96 @@ Date,Source,Keyword,Search_Score
 2024-10-27,Google Trends,dogecoin,10
 2024-11-03,Google Trends,dogecoin,22
 2024-11-10,Google Trends,dogecoin,100
-2024-11-17,Google Trends,dogecoin,54
+2024-11-17,Google Trends,dogecoin,55
 2024-11-24,Google Trends,dogecoin,42
-2024-12-01,Google Trends,dogecoin,45
-2024-12-08,Google Trends,dogecoin,35
-2024-12-15,Google Trends,dogecoin,32
+2024-12-01,Google Trends,dogecoin,43
+2024-12-08,Google Trends,dogecoin,36
+2024-12-15,Google Trends,dogecoin,31
 2024-12-22,Google Trends,dogecoin,25
 2024-12-29,Google Trends,dogecoin,25
-2025-01-05,Google Trends,dogecoin,22
+2025-01-05,Google Trends,dogecoin,23
 2025-01-12,Google Trends,dogecoin,25
-2025-01-19,Google Trends,dogecoin,36
+2025-01-19,Google Trends,dogecoin,35
 2025-01-26,Google Trends,dogecoin,20
-2025-02-02,Google Trends,dogecoin,22
+2025-02-02,Google Trends,dogecoin,21
 2025-02-09,Google Trends,dogecoin,16
-2025-02-16,Google Trends,dogecoin,13
+2025-02-16,Google Trends,dogecoin,15
 2025-02-23,Google Trends,dogecoin,15
 2025-03-02,Google Trends,dogecoin,14
 2025-03-09,Google Trends,dogecoin,13
 2025-03-16,Google Trends,dogecoin,9
 2025-03-23,Google Trends,dogecoin,10
 2025-03-30,Google Trends,dogecoin,9
-2025-04-06,Google Trends,dogecoin,9
-2025-04-13,Google Trends,dogecoin,7
+2025-04-06,Google Trends,dogecoin,10
+2025-04-13,Google Trends,dogecoin,6
 2025-04-20,Google Trends,dogecoin,7
 2025-04-27,Google Trends,dogecoin,6
-2025-05-04,Google Trends,dogecoin,8
+2025-05-04,Google Trends,dogecoin,7
 2025-05-11,Google Trends,dogecoin,9
-2025-05-18,Google Trends,dogecoin,8
-2025-05-25,Google Trends,dogecoin,7
-2025-06-01,Google Trends,dogecoin,6
-2024-06-02,Google Trends,pepe coin,29
-2024-06-09,Google Trends,pepe coin,23
+2025-05-18,Google Trends,dogecoin,9
+2024-05-19,Google Trends,shiba inu coin,25
+2024-05-26,Google Trends,shiba inu coin,25
+2024-06-02,Google Trends,shiba inu coin,20
+2024-06-09,Google Trends,shiba inu coin,18
+2024-06-16,Google Trends,shiba inu coin,17
+2024-06-23,Google Trends,shiba inu coin,16
+2024-06-30,Google Trends,shiba inu coin,14
+2024-07-07,Google Trends,shiba inu coin,13
+2024-07-14,Google Trends,shiba inu coin,18
+2024-07-21,Google Trends,shiba inu coin,15
+2024-07-28,Google Trends,shiba inu coin,14
+2024-08-04,Google Trends,shiba inu coin,16
+2024-08-11,Google Trends,shiba inu coin,12
+2024-08-18,Google Trends,shiba inu coin,14
+2024-08-25,Google Trends,shiba inu coin,12
+2024-09-01,Google Trends,shiba inu coin,11
+2024-09-08,Google Trends,shiba inu coin,11
+2024-09-15,Google Trends,shiba inu coin,12
+2024-09-22,Google Trends,shiba inu coin,23
+2024-09-29,Google Trends,shiba inu coin,17
+2024-10-06,Google Trends,shiba inu coin,14
+2024-10-13,Google Trends,shiba inu coin,18
+2024-10-20,Google Trends,shiba inu coin,16
+2024-10-27,Google Trends,shiba inu coin,19
+2024-11-03,Google Trends,shiba inu coin,32
+2024-11-10,Google Trends,shiba inu coin,100
+2024-11-17,Google Trends,shiba inu coin,67
+2024-11-24,Google Trends,shiba inu coin,49
+2024-12-01,Google Trends,shiba inu coin,88
+2024-12-08,Google Trends,shiba inu coin,58
+2024-12-15,Google Trends,shiba inu coin,40
+2024-12-22,Google Trends,shiba inu coin,31
+2024-12-29,Google Trends,shiba inu coin,31
+2025-01-05,Google Trends,shiba inu coin,29
+2025-01-12,Google Trends,shiba inu coin,32
+2025-01-19,Google Trends,shiba inu coin,37
+2025-01-26,Google Trends,shiba inu coin,24
+2025-02-02,Google Trends,shiba inu coin,25
+2025-02-09,Google Trends,shiba inu coin,20
+2025-02-16,Google Trends,shiba inu coin,16
+2025-02-23,Google Trends,shiba inu coin,17
+2025-03-02,Google Trends,shiba inu coin,16
+2025-03-09,Google Trends,shiba inu coin,15
+2025-03-16,Google Trends,shiba inu coin,13
+2025-03-23,Google Trends,shiba inu coin,14
+2025-03-30,Google Trends,shiba inu coin,10
+2025-04-06,Google Trends,shiba inu coin,12
+2025-04-13,Google Trends,shiba inu coin,9
+2025-04-20,Google Trends,shiba inu coin,11
+2025-04-27,Google Trends,shiba inu coin,9
+2025-05-04,Google Trends,shiba inu coin,11
+2025-05-11,Google Trends,shiba inu coin,13
+2025-05-18,Google Trends,shiba inu coin,12
+2024-05-19,Google Trends,pepe coin,46
+2024-05-26,Google Trends,pepe coin,53
+2024-06-02,Google Trends,pepe coin,28
+2024-06-09,Google Trends,pepe coin,24
 2024-06-16,Google Trends,pepe coin,21
 2024-06-23,Google Trends,pepe coin,20
 2024-06-30,Google Trends,pepe coin,20
 2024-07-07,Google Trends,pepe coin,18
-2024-07-14,Google Trends,pepe coin,26
-2024-07-21,Google Trends,pepe coin,18
+2024-07-14,Google Trends,pepe coin,24
+2024-07-21,Google Trends,pepe coin,19
 2024-07-28,Google Trends,pepe coin,16
 2024-08-04,Google Trends,pepe coin,20
 2024-08-11,Google Trends,pepe coin,15
@@ -76,24 +131,24 @@ Date,Source,Keyword,Search_Score
 2024-10-27,Google Trends,pepe coin,14
 2024-11-03,Google Trends,pepe coin,20
 2024-11-10,Google Trends,pepe coin,100
-2024-11-17,Google Trends,pepe coin,73
-2024-11-24,Google Trends,pepe coin,52
-2024-12-01,Google Trends,pepe coin,74
-2024-12-08,Google Trends,pepe coin,83
+2024-11-17,Google Trends,pepe coin,72
+2024-11-24,Google Trends,pepe coin,53
+2024-12-01,Google Trends,pepe coin,75
+2024-12-08,Google Trends,pepe coin,85
 2024-12-15,Google Trends,pepe coin,58
 2024-12-22,Google Trends,pepe coin,41
 2024-12-29,Google Trends,pepe coin,58
 2025-01-05,Google Trends,pepe coin,40
 2025-01-12,Google Trends,pepe coin,44
-2025-01-19,Google Trends,pepe coin,56
+2025-01-19,Google Trends,pepe coin,57
 2025-01-26,Google Trends,pepe coin,39
 2025-02-02,Google Trends,pepe coin,35
 2025-02-09,Google Trends,pepe coin,30
-2025-02-16,Google Trends,pepe coin,24
+2025-02-16,Google Trends,pepe coin,27
 2025-02-23,Google Trends,pepe coin,22
-2025-03-02,Google Trends,pepe coin,21
-2025-03-09,Google Trends,pepe coin,18
-2025-03-16,Google Trends,pepe coin,17
+2025-03-02,Google Trends,pepe coin,22
+2025-03-09,Google Trends,pepe coin,19
+2025-03-16,Google Trends,pepe coin,18
 2025-03-23,Google Trends,pepe coin,16
 2025-03-30,Google Trends,pepe coin,14
 2025-04-06,Google Trends,pepe coin,14
@@ -101,7 +156,5 @@ Date,Source,Keyword,Search_Score
 2025-04-20,Google Trends,pepe coin,16
 2025-04-27,Google Trends,pepe coin,13
 2025-05-04,Google Trends,pepe coin,20
-2025-05-11,Google Trends,pepe coin,23
-2025-05-18,Google Trends,pepe coin,20
-2025-05-25,Google Trends,pepe coin,18
-2025-06-01,Google Trends,pepe coin,15
+2025-05-11,Google Trends,pepe coin,24
+2025-05-18,Google Trends,pepe coin,21
