@@ -223,75 +223,131 @@ elif page == "3. Price Correlation":
     st.title("🔗 Sentiment & Trend Correlation with Price")
     st.markdown("Correlating sentiment scores and Google Trends data with historical price movement.")
     
-    # Load data
-    sentiment_df = load_sentiment_data()
-    trends_df = load_trends_data()
+    # Load data directly from data_prep
+    from data_prep import prepare_data
     
-    # Create sample price data
-    price_df = create_sample_price_data(sentiment_df, trends_df)
-    combined_df = combine_all_data(price_df, sentiment_df, trends_df)
+    with st.spinner("Loading and preparing correlation data..."):
+        try:
+            final_data = prepare_data()
+        except Exception as e:
+            st.error(f"Error loading data: {str(e)}")
+            st.stop()
     
-    print("Combined: ", combined_df.count())
+    # Check if we have data
+    if final_data.empty:
+        st.error("No data available for correlation analysis.")
+        st.stop()
     
-    # Check for NaN values and data alignment
+    # Sidebar for coin selection
+    st.sidebar.subheader("🔧 Correlation Configuration")
+    available_coins = final_data['coin'].unique().tolist()
+    selected_coin = st.sidebar.selectbox(
+        "Select Coin for Analysis", 
+        options=available_coins,
+        index=0 if 'pepe' in available_coins else 0
+    )
+    
+    # Filter data for selected coin
+    coin_data = final_data[final_data["coin"] == selected_coin].copy()
+    
+    if len(coin_data) == 0:
+        st.error(f"No data available for {selected_coin}")
+        st.stop()
+    
+    st.write(f"📈 **Analyzing {selected_coin.upper()}**: {len(coin_data)} records")
+    
+    # Show date range information
+    if 'date' in coin_data.columns:
+        min_date = coin_data['date'].min()
+        max_date = coin_data['date'].max()
+        st.write(f"📅 **Date Range**: {min_date} to {max_date}")
+    
+    # Check for NaN values and data quality
     st.subheader("📊 Data Quality Check")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_rows = len(combined_df)
+        total_rows = len(coin_data)
         st.metric("Total Records", total_rows)
     
     with col2:
-        valid_sentiment = combined_df['Sentiment_Mean'].notna().sum()
+        valid_sentiment = coin_data['sentiment_mean'].notna().sum() if 'sentiment_mean' in coin_data.columns else 0
         st.metric("Valid Sentiment", f"{valid_sentiment}/{total_rows}")
     
     with col3:
-        valid_trends = combined_df['Trends_Mean'].notna().sum()
-        st.metric("Valid Trends", f"{valid_trends}/{total_rows}")
+        valid_trends = coin_data['Search_Score'].notna().sum() if 'Search_Score' in coin_data.columns else 0
+        st.metric("Valid Search Trends", f"{valid_trends}/{total_rows}")
     
-    # Show data availability
+    with col4:
+        valid_prices = coin_data['close'].notna().sum()
+        st.metric("Valid Prices", f"{valid_prices}/{total_rows}")
+    
+    # Show data availability timeline
     st.subheader("📈 Data Availability Timeline")
-    availability_df = combined_df[['Date', 'Close', 'Sentiment_Mean', 'Trends_Mean']].copy()
-    availability_df['Has_Sentiment'] = availability_df['Sentiment_Mean'].notna()
-    availability_df['Has_Trends'] = availability_df['Trends_Mean'].notna()
+    
+    # Create availability visualization
+    availability_df = coin_data[['date', 'close']].copy() if 'date' in coin_data.columns else coin_data[['close']].copy()
+    
+    if 'sentiment_mean' in coin_data.columns:
+        availability_df['Has_Sentiment'] = coin_data['sentiment_mean'].notna()
+    else:
+        availability_df['Has_Sentiment'] = False
+        
+    if 'Search_Score' in coin_data.columns:
+        availability_df['Has_Trends'] = coin_data['Search_Score'].notna()
+    else:
+        availability_df['Has_Trends'] = False
     
     fig_avail = go.Figure()
-    fig_avail.add_trace(go.Scatter(
-        x=availability_df['Date'],
-        y=availability_df['Close'],
-        mode='lines',
-        name='Price',
-        line=dict(color='blue')
-    ))
     
-    # Add markers for data availability
-    sentiment_available = availability_df[availability_df['Has_Sentiment']]
-    if not sentiment_available.empty:
+    if 'date' in availability_df.columns:
         fig_avail.add_trace(go.Scatter(
-            x=sentiment_available['Date'],
-            y=sentiment_available['Close'],
-            mode='markers',
-            name='Has Sentiment Data',
-            marker=dict(color='green', size=3),
-            yaxis='y'
+            x=availability_df['date'],
+            y=availability_df['close'],
+            mode='lines',
+            name='Price',
+            line=dict(color='blue')
         ))
+        
+        # Add markers for data availability
+        sentiment_available = availability_df[availability_df['Has_Sentiment']]
+        if not sentiment_available.empty:
+            fig_avail.add_trace(go.Scatter(
+                x=sentiment_available['date'],
+                y=sentiment_available['close'],
+                mode='markers',
+                name='Has Sentiment Data',
+                marker=dict(color='green', size=3)
+            ))
+        
+        trends_available = availability_df[availability_df['Has_Trends']]
+        if not trends_available.empty:
+            fig_avail.add_trace(go.Scatter(
+                x=trends_available['date'],
+                y=trends_available['close'],
+                mode='markers',
+                name='Has Search Trends Data',
+                marker=dict(color='red', size=3)
+            ))
     
-    trends_available = availability_df[availability_df['Has_Trends']]
-    if not trends_available.empty:
-        fig_avail.add_trace(go.Scatter(
-            x=trends_available['Date'],
-            y=trends_available['Close'],
-            mode='markers',
-            name='Has Trends Data',
-            marker=dict(color='red', size=3),
-            yaxis='y'
-        ))
-    
-    fig_avail.update_layout(title="Data Availability Over Time", xaxis_title="Date", yaxis_title="Price")
+    fig_avail.update_layout(
+        title=f"Data Availability Over Time for {selected_coin.upper()}", 
+        xaxis_title="Date", 
+        yaxis_title="Price"
+    )
     st.plotly_chart(fig_avail, use_container_width=True)
     
+    # Prepare correlation data
+    correlation_columns = ['close']
+    if 'sentiment_mean' in coin_data.columns:
+        correlation_columns.append('sentiment_mean')
+    if 'positive_ratio' in coin_data.columns:
+        correlation_columns.append('positive_ratio')
+    if 'Search_Score' in coin_data.columns:
+        correlation_columns.append('Search_Score')
+    
     # Clean data for correlation analysis
-    correlation_df = combined_df[['Close', 'Sentiment_Mean', 'Trends_Mean']].dropna()
+    correlation_df = coin_data[correlation_columns].dropna()
     
     if len(correlation_df) > 0:
         # Calculate correlations
@@ -301,109 +357,166 @@ elif page == "3. Price Correlation":
         st.subheader("📊 Correlation Matrix")
         st.write(f"Correlation calculated on {len(correlation_df)} complete records")
         
-        fig_corr = px.imshow(correlation_data, 
-                            text_auto=True, 
-                            aspect="auto",
-                            title="Correlation between Price, Sentiment, and Search Trends",
-                            color_continuous_scale="RdBu_r")
+        fig_corr = px.imshow(
+            correlation_data, 
+            text_auto=True, 
+            aspect="auto",
+            title=f"Correlation Matrix for {selected_coin.upper()}",
+            color_continuous_scale="RdBu_r",
+            labels={'color': 'Correlation'}
+        )
         st.plotly_chart(fig_corr, use_container_width=True)
         
         # Show correlation values
         st.subheader("📈 Correlation Values")
-        col1, col2 = st.columns(2)
         
-        with col1:
-            price_sentiment_corr = correlation_data.loc['Close', 'Sentiment_Mean']
-            st.metric("Price vs Sentiment", f"{price_sentiment_corr:.4f}")
+        correlation_metrics = []
+        if 'sentiment_mean' in correlation_data.columns:
+            price_sentiment_corr = correlation_data.loc['close', 'sentiment_mean']
+            correlation_metrics.append(("Price vs Sentiment", price_sentiment_corr))
+        
+        if 'positive_ratio' in correlation_data.columns:
+            price_positive_corr = correlation_data.loc['close', 'positive_ratio']
+            correlation_metrics.append(("Price vs Positive Ratio", price_positive_corr))
             
-        with col2:
-            price_trends_corr = correlation_data.loc['Close', 'Trends_Mean']
-            st.metric("Price vs Search Trends", f"{price_trends_corr:.4f}")
+        if 'Search_Score' in correlation_data.columns:
+            price_trends_corr = correlation_data.loc['close', 'Search_Score']
+            correlation_metrics.append(("Price vs Search Trends", price_trends_corr))
+        
+        # Display correlation metrics in columns
+        if correlation_metrics:
+            cols = st.columns(len(correlation_metrics))
+            for i, (label, value) in enumerate(correlation_metrics):
+                cols[i].metric(label, f"{value:.4f}")
         
         # Scatter plots with trendlines
-        col1, col2 = st.columns(2)
+        plot_columns = [col for col in correlation_columns if col != 'close']
         
-        with col1:
-            st.subheader("💰 Price vs Sentiment")
-            if correlation_df['Sentiment_Mean'].nunique() > 1:
-                fig_scatter1 = px.scatter(correlation_df, 
-                                         x='Sentiment_Mean', 
-                                         y='Close',
-                                         trendline="ols",
-                                         title="Price vs Sentiment Score")
-                st.plotly_chart(fig_scatter1, use_container_width=True)
-            else:
-                st.warning("Insufficient sentiment data variation for scatter plot")
-        
-        with col2:
-            st.subheader("🔍 Price vs Search Trends")
-            if correlation_df['Trends_Mean'].nunique() > 1:
-                fig_scatter2 = px.scatter(correlation_df, 
-                                         x='Trends_Mean', 
-                                         y='Close',
-                                         trendline="ols",
-                                         title="Price vs Search Score")
-                st.plotly_chart(fig_scatter2, use_container_width=True)
-            else:
-                st.warning("Insufficient trends data variation for scatter plot")
+        if len(plot_columns) >= 2:
+            col1, col2 = st.columns(2)
+            
+            if 'sentiment_mean' in plot_columns:
+                with col1:
+                    st.subheader("💰 Price vs Sentiment")
+                    if correlation_df['sentiment_mean'].nunique() > 1:
+                        fig_scatter1 = px.scatter(
+                            correlation_df, 
+                            x='sentiment_mean', 
+                            y='close',
+                            trendline="ols",
+                            title="Price vs Sentiment Score",
+                            labels={'sentiment_mean': 'Sentiment Score', 'close': 'Price'}
+                        )
+                        st.plotly_chart(fig_scatter1, use_container_width=True)
+                    else:
+                        st.warning("Insufficient sentiment data variation for scatter plot")
+            
+            if 'Search_Score' in plot_columns:
+                with col2:
+                    st.subheader("🔍 Price vs Search Trends")
+                    if correlation_df['Search_Score'].nunique() > 1:
+                        fig_scatter2 = px.scatter(
+                            correlation_df, 
+                            x='Search_Score', 
+                            y='close',
+                            trendline="ols",
+                            title="Price vs Search Score",
+                            labels={'Search_Score': 'Search Score', 'close': 'Price'}
+                        )
+                        st.plotly_chart(fig_scatter2, use_container_width=True)
+                    else:
+                        st.warning("Insufficient search trends data variation for scatter plot")
         
         # Time series comparison with aligned data
-        st.subheader("📈 Time Series Comparison (Aligned Data)")
+        st.subheader("📈 Time Series Comparison")
         
-        # Use only dates with all data available
-        complete_data = combined_df.dropna(subset=['Close', 'Sentiment_Mean', 'Trends_Mean'])
+        if 'date' in coin_data.columns and len(correlation_df) > 0:
+            # Get dates for the correlation data
+            correlation_with_dates = coin_data[correlation_columns + ['date']].dropna()
+            
+            if len(correlation_with_dates) > 0:
+                # Normalize data for comparison
+                normalized_df = correlation_with_dates.copy()
+                for col in correlation_columns:
+                    col_min = normalized_df[col].min()
+                    col_max = normalized_df[col].max()
+                    if col_max > col_min:
+                        normalized_df[f'{col}_norm'] = (normalized_df[col] - col_min) / (col_max - col_min)
+                    else:
+                        normalized_df[f'{col}_norm'] = 0.5  # Set to middle if no variation
+                
+                fig_time = go.Figure()
+                
+                # Price line
+                fig_time.add_trace(go.Scatter(
+                    x=normalized_df['date'], 
+                    y=normalized_df['close_norm'], 
+                    mode='lines', 
+                    name='Price (Normalized)',
+                    line=dict(color='blue', width=2)
+                ))
+                
+                # Sentiment line
+                if 'sentiment_mean' in correlation_columns:
+                    fig_time.add_trace(go.Scatter(
+                        x=normalized_df['date'], 
+                        y=normalized_df['sentiment_mean_norm'], 
+                        mode='lines', 
+                        name='Sentiment (Normalized)',
+                        line=dict(color='green')
+                    ))
+                
+                # Search trends line
+                if 'Search_Score' in correlation_columns:
+                    fig_time.add_trace(go.Scatter(
+                        x=normalized_df['date'], 
+                        y=normalized_df['Search_Score_norm'], 
+                        mode='lines', 
+                        name='Search Trends (Normalized)',
+                        line=dict(color='red')
+                    ))
+                
+                # Positive ratio line
+                if 'positive_ratio' in correlation_columns:
+                    fig_time.add_trace(go.Scatter(
+                        x=normalized_df['date'], 
+                        y=normalized_df['positive_ratio_norm'], 
+                        mode='lines', 
+                        name='Positive Ratio (Normalized)',
+                        line=dict(color='orange')
+                    ))
+                
+                fig_time.update_layout(
+                    title=f"Normalized Time Series Comparison for {selected_coin.upper()} ({len(correlation_with_dates)} data points)",
+                    xaxis_title="Date",
+                    yaxis_title="Normalized Value",
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig_time, use_container_width=True)
         
-        if len(complete_data) > 0:
-            # Normalize data for comparison
-            normalized_df = complete_data.copy()
-            for col in ['Close', 'Sentiment_Mean', 'Trends_Mean']:
-                col_min = normalized_df[col].min()
-                col_max = normalized_df[col].max()
-                if col_max > col_min:
-                    normalized_df[f'{col}_norm'] = (normalized_df[col] - col_min) / (col_max - col_min)
-                else:
-                    normalized_df[f'{col}_norm'] = 0.5  # Set to middle if no variation
-            
-            fig_time = go.Figure()
-            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                         y=normalized_df['Close_norm'], 
-                                         mode='lines', 
-                                         name='Price (Normalized)',
-                                         line=dict(color='blue')))
-            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                         y=normalized_df['Sentiment_Mean_norm'], 
-                                         mode='lines', 
-                                         name='Sentiment (Normalized)',
-                                         line=dict(color='green')))
-            fig_time.add_trace(go.Scatter(x=normalized_df['Date'], 
-                                         y=normalized_df['Trends_Mean_norm'], 
-                                         mode='lines', 
-                                         name='Search Trends (Normalized)',
-                                         line=dict(color='red')))
-            
-            fig_time.update_layout(title=f"Normalized Time Series Comparison ({len(complete_data)} aligned data points)",
-                                  xaxis_title="Date",
-                                  yaxis_title="Normalized Value")
-            st.plotly_chart(fig_time, use_container_width=True)
-        else:
-            st.warning("No overlapping data points found for time series comparison")
-    
+        # Summary statistics
+        st.subheader("📋 Summary Statistics")
+        summary_stats = correlation_df.describe()
+        st.dataframe(summary_stats, use_container_width=True)
+        
     else:
         st.error("No complete data records found for correlation analysis")
-        st.write("Possible issues:")
-        st.write("- Date ranges don't overlap between datasets")
-        st.write("- All sentiment or trends data is NaN")
-        st.write("- Data format issues")
+        st.write("**Possible issues:**")
+        st.write("- Missing sentiment or search trends data")
+        st.write("- All values are NaN for key columns")
+        st.write("- Data alignment issues")
         
         # Show debug information
         st.subheader("🔍 Debug Information")
-        st.write("Price data range:", combined_df['Date'].min(), "to", combined_df['Date'].max())
-        st.write("Non-null sentiment records:", combined_df['Sentiment_Mean'].notna().sum())
-        st.write("Non-null trends records:", combined_df['Trends_Mean'].notna().sum())
+        st.write("**Available columns:**", list(coin_data.columns))
+        st.write("**Data types:**")
+        for col in coin_data.columns:
+            non_null_count = coin_data[col].notna().sum()
+            st.write(f"- {col}: {non_null_count}/{len(coin_data)} non-null values")
         
         # Show sample of data
-        st.write("Sample of combined data:")
-        st.dataframe(combined_df[['Date', 'Close', 'Sentiment_Mean', 'Trends_Mean']].head(10))
+        st.write("**Sample of data:**")
+        st.dataframe(coin_data.head(10))
 
 elif page == "4. Price Prediction":
     st.title("🔮 Price Prediction Models")
