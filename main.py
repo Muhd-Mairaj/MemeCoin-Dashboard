@@ -1310,7 +1310,6 @@ elif page == "4. Price Prediction":
                             future_dates_actual = [(last_date + pd.Timedelta(days=i+1)).strftime('%Y-%m-%d')
                                                  for i in range(prediction_days)]
 
-
                             # Convert historical dates to strings for consistency
                             historical_dates_str = [pd.to_datetime(d).strftime('%Y-%m-%d')
                                                   for d in historical_dates_actual]
@@ -1362,7 +1361,6 @@ elif page == "4. Price Prediction":
                                 'Daily Change': [f"{((future_predictions[i] - (historical_prices[-1] if i == 0 else future_predictions[i-1])) / (historical_prices[-1] if i == 0 else future_predictions[i-1]) * 100):.2f}%" for i in range(prediction_days)]
                             })
 
-
                         else:
                             # Fallback to generic day indices if no date info
                             historical_dates = list(range(-30, 0))
@@ -1403,7 +1401,6 @@ elif page == "4. Price Prediction":
                                 yaxis_title='Price',
                                 hovermode='x unified'
                             )
-
 
                             # Generic prediction table
                             pred_df = pd.DataFrame({
@@ -1517,8 +1514,96 @@ elif page == "4. Price Prediction":
                 })
                 st.dataframe(correlation_df.head(15), use_container_width=True)
 
-elif page == "5. Model Training and Evaluation":
-    ...
+elif page == "5. Memecoins vs Traditional Coins":
+    st.title("⚖️ Memecoins vs Traditional Coins")
+    st.markdown("Comparing price behavior and volatility between memecoins and established cryptocurrencies.")
+
+    # Load data
+    sentiment_df = load_sentiment_data()
+    trends_df = load_trends_data()
+    memecoin_price_df = create_sample_price_data(sentiment_df, trends_df)
+
+    # Create traditional coin data (Bitcoin simulation)
+    btc_dates = pd.date_range(
+        start=memecoin_price_df["Date"].min(),
+        end=memecoin_price_df["Date"].max(),
+        freq="D",
+    )
+
+    np.random.seed(123)
+    btc_prices = []
+    current_btc = 45000
+    for _ in btc_dates:
+        change = np.random.normal(0, 0.03)  # Lower volatility for BTC
+        current_btc = max(1000, current_btc * (1 + change))
+        btc_prices.append(current_btc)
+
+    btc_df = pd.DataFrame(
+        {"Date": btc_dates, "Close": btc_prices, "Type": "Traditional (BTC)"}
+    )
+
+    memecoin_compare_df = memecoin_price_df[["Date", "Close"]].copy()
+    memecoin_compare_df["Type"] = "Memecoin (DOGE)"
+
+    # Normalize prices for comparison
+    memecoin_compare_df["Normalized_Price"] = (
+        memecoin_compare_df["Close"] / memecoin_compare_df["Close"].iloc[0]
+    ) * 100
+
+    btc_df["Normalized_Price"] = (btc_df["Close"] / btc_df["Close"].iloc[0]) * 100
+    compare_df = pd.concat([memecoin_compare_df, btc_df])
+
+    # Price comparison
+    st.subheader("📈 Normalized Price Comparison")
+    fig_compare = px.line(
+        compare_df,
+        x="Date",
+        y="Normalized_Price",
+        color="Type",
+        title="Memecoin vs Traditional Crypto Performance (Base 100)",
+    )
+
+    st.plotly_chart(fig_compare, use_container_width=True)
+
+    # Volatility analysis
+    st.subheader("📊 Volatility Analysis")
+    memecoin_volatility = memecoin_compare_df["Close"].pct_change().std() * 100
+    btc_volatility = btc_df["Close"].pct_change().std() * 100
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Memecoin Volatility", f"{memecoin_volatility:.2f}%")
+
+    with col2:
+        st.metric("Bitcoin Volatility", f"{btc_volatility:.2f}%")
+
+    with col3:
+        volatility_ratio = memecoin_volatility / btc_volatility
+        st.metric("Volatility Ratio", f"{volatility_ratio:.2f}x")
+
+    # Distribution of returns
+    st.subheader("📊 Return Distribution")
+    memecoin_returns = memecoin_compare_df["Close"].pct_change().dropna() * 100
+    btc_returns = btc_df["Close"].pct_change().dropna() * 100
+
+    fig_dist = go.Figure()
+    fig_dist.add_trace(
+        go.Histogram(
+            x=memecoin_returns, name="Memecoin Returns", opacity=0.7, nbinsx=30
+        )
+    )
+    fig_dist.add_trace(
+        go.Histogram(x=btc_returns, name="Bitcoin Returns", opacity=0.7, nbinsx=30)
+    )
+
+    fig_dist.update_layout(
+        title="Distribution of Daily Returns (%)",
+        xaxis_title="Daily Return (%)",
+        yaxis_title="Frequency",
+        barmode="overlay",
+    )
+
+    st.plotly_chart(fig_dist, use_container_width=True)
 
 elif page == "6. Raw Data Explorer":
     st.title("🧪 Raw Data Explorer")
@@ -1528,7 +1613,7 @@ elif page == "6. Raw Data Explorer":
     trend_df = load_trends_data()
 
     # Create Tabs
-    tab1, tab2 = st.tabs(["📊 Sentiment Data", "📈 Trend Data"])
+    tab1, tab2, tab3 = st.tabs(["📊 Sentiment Data", "📈 Trend Data", "💰 Price Data"])
 
     # ------------------- #
     # Sentiment Tab
@@ -1553,7 +1638,6 @@ elif page == "6. Raw Data Explorer":
         #     format="DD-MM-YYYY",
         # )
         # start_date, end_date = date_range
-
 
         # Apply filters
         filtered_sentiment = sentiment_df[
