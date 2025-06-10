@@ -1516,3 +1516,130 @@ elif page == "4. Price Prediction":
                 })
                 st.dataframe(correlation_df.head(15), use_container_width=True)
 
+elif page == "5. Model Training and Evaluation":
+    ...
+
+elif page == "6. Raw Data Explorer":
+    st.title("🧪 Raw Data Explorer")
+
+    # Load datasets
+    sentiment_df = load_sentiment_data()
+    trend_df = load_trends_data()
+
+    # Create Tabs
+    tab1, tab2 = st.tabs(["📊 Sentiment Data", "📈 Trend Data"])
+
+    # ------------------- #
+    # Sentiment Tab
+    # ------------------- #
+    with tab1:
+        st.subheader("Sentiment Data Explorer")
+
+        # Filters
+        keywords = sorted(sentiment_df["Keyword"].unique())
+        sentiment_labels = sorted(sentiment_df["Label"].unique())
+        min_date, max_date = sentiment_df["Timestamp"].min(), sentiment_df["Timestamp"].max()
+
+        selected_keywords = st.multiselect("Select Keywords", keywords, default=keywords)
+        selected_labels = st.multiselect("Select Sentiment Labels", sentiment_labels, default=sentiment_labels)
+        start_date, end_date = st.date_input("Select Time Range", [min_date.date(), max_date.date()])
+
+        # date_range = st.slider(
+        #     "Select Date Range",
+        #     min_value=min_date.date(),
+        #     max_value=max_date.date(),
+        #     value=(min_date.date(), max_date.date()),
+        #     format="DD-MM-YYYY",
+        # )
+        # start_date, end_date = date_range
+
+
+        # Apply filters
+        filtered_sentiment = sentiment_df[
+            (sentiment_df["Keyword"].isin(selected_keywords)) &
+            (sentiment_df["Label"].isin(selected_labels)) &
+            (sentiment_df["Timestamp"].dt.date >= start_date) &
+            (sentiment_df["Timestamp"].dt.date <= end_date)
+        ]
+
+        # Show summary
+        st.write(f"**Filtered Data Count:** {len(filtered_sentiment)}")
+        st.write(f"**Date Range:** {start_date} to {end_date}")
+        st.write(f"**Selected Keywords:** {', '.join(selected_keywords)}")
+        st.write(f"**Selected Sentiment Labels:** {', '.join(selected_labels)}")
+
+        # Search functionality
+        search_text = st.text_input("Search Post Text")
+        if search_text:
+            filtered_sentiment = filtered_sentiment[
+                filtered_sentiment["Original_Text"].str.contains(search_text, case=False, na=False)
+            ]
+
+        # Show tip with close option
+        if 'show_tip' not in st.session_state:
+            st.session_state.show_tip = True
+
+        if st.session_state.show_tip:
+            col1, col2 = st.columns([10, 1])
+            with col1:
+                st.info("💡 **Tip:** You can click and drag column headers to rearrange them, and click on column headers to sort the data.")
+            with col2:
+                if st.button("✕", key="close_sentiment_tip", help="Close tip"):
+                    st.session_state.show_tip = False
+                    # st.rerun()
+
+        # Show filtered data
+        st.dataframe(
+            filtered_sentiment.reset_index(drop=True),
+            use_container_width=True,
+            height=500,
+        )
+
+    # ------------------- #
+    # Trend Tab
+    # ------------------- #
+    with tab2:
+        st.subheader("Trend Data Explorer")
+
+        # Example trend_df columns: ['Timestamp', 'Keyword', 'Volume', 'Price']
+        trend_keywords = sorted(trend_df["Keyword"].unique())
+        trend_start, trend_end = trend_df["Date"].min(), trend_df["Date"].max()
+
+        selected_trend_keywords = st.multiselect("Select Keywords", trend_keywords, default=trend_keywords)
+        trend_start_date, trend_end_date = st.date_input("Trend Date Range", [trend_start.date(), trend_end.date()])
+
+        # Filter trend data
+        filtered_trend = trend_df[
+            (trend_df["Keyword"].isin(selected_trend_keywords)) &
+            (trend_df["Date"].dt.date >= trend_start_date) &
+            (trend_df["Date"].dt.date <= trend_end_date)
+        ]
+
+        # Show summary
+        st.write(f"**Filtered Trend Data Count:** {len(filtered_trend)}")
+        st.write(f"**Trend Date Range:** {trend_start_date} to {trend_end_date}")
+        st.write(f"**Selected Keywords:** {', '.join(selected_trend_keywords)}")
+
+        # Search functionality
+        search_trend_text = st.text_input("Search Trend Text")
+        if search_trend_text:
+            filtered_trend = filtered_trend[
+                filtered_trend["Keyword"].str.contains(search_trend_text, case=False, na=False)
+            ]
+        # Show tip with close option
+        if 'show_tip' not in st.session_state:
+            st.session_state.show_tip = True
+        if st.session_state.show_tip:
+            col1, col2 = st.columns([10, 1])
+            with col1:
+                st.info("💡 **Tip:** You can click and drag column headers to rearrange them, and click on column headers to sort the data.")
+            with col2:
+                if st.button("✕", key="close_trend_tip", help="Close tip"):
+                    st.session_state.show_tip = False
+                    st.rerun()
+
+        st.dataframe(
+            filtered_trend.reset_index(drop=True),
+            use_container_width=False,
+            height=500,
+        )
