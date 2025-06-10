@@ -7,6 +7,9 @@ import requests
 import json
 import ccxt
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 # Load helper functions
 from helper import load_trends_data, load_sentiment_data
 from prediction_models import StockPricePredictor, create_sample_price_data, combine_all_data
@@ -53,7 +56,8 @@ elif page == "1. Sentiment Analysis":
     selected_keywords = st.multiselect("Select Keyword(s)", keywords, default=keywords[:0])
 
     min_date, max_date = sentiment_df["Timestamp"].min(), sentiment_df["Timestamp"].max()
-    start_date, end_date = st.date_input("Select Time Range", [pd.Timestamp("2025-04-01").date(), max_date], min_value=min_date, max_value=max_date)
+    # start_date, end_date = st.date_input("Select Time Range", [pd.Timestamp("2025-04-01").date(), max_date], min_value=min_date, max_value=max_date)
+    start_date, end_date = st.date_input("Select Time Range", [min_date, max_date], min_value=min_date, max_value=max_date)
 
     # Filter data
     if not selected_keywords:
@@ -73,6 +77,7 @@ elif page == "1. Sentiment Analysis":
     # Apply sentiment filter
     filtered_df = filtered_df[filtered_df["Label"].isin(selected_labels)]
 
+    # Check if filtered DataFrame is empty
     if filtered_df.empty:
         st.warning("No data available for the selected filters.")
         st.stop()
@@ -97,20 +102,94 @@ elif page == "1. Sentiment Analysis":
     print("$$%", filtered_df.describe())
 
     # Time-series line plot: Sentiment over time, one line per keyword
-    st.markdown("### 📈 Sentiment Score Over Time")
+    st.markdown("### 📈 Sentiment Score Over Time (Rolling Averages)")
     line_df = filtered_df.copy()
-    line_df = line_df.groupby(["Timestamp", "Keyword"]).agg({"Sentiment_Score": "mean"}).reset_index()
+    # line_df = line_df.groupby(["Timestamp", "Keyword"]).agg({"Sentiment_Score": "mean"}).reset_index()
+
+    # remove outliers based on timestamp for cleaner visualization
+    Q1 = line_df["Timestamp"].quantile(0.25)
+    Q3 = line_df["Timestamp"].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    line_df = line_df[
+        (line_df["Timestamp"] >= lower_bound) &
+        (line_df["Timestamp"] <= upper_bound)
+    ]
+
+    # Set desired height per row
+    height_per_row = 300
+
+    # Count number of rows needed for faceted line plot
+    num_keywords = line_df["Keyword"].nunique()
+    num_cols = 2
+    num_rows = (num_keywords + num_cols - 1) // num_cols
+
+    # Apply rolling average per keyword
+    line_df.sort_values("Timestamp", inplace=True)
+    line_df["Sentiment_Score_Smoothed"] = (
+        line_df.groupby("Keyword")["Sentiment_Score"]
+        .transform(lambda x: x.rolling(7, min_periods=1).mean())
+    )
 
     line_fig = px.line(
         line_df,
         x="Timestamp",
-        y="Sentiment_Score",
+        y="Sentiment_Score_Smoothed",
         color="Keyword",  # Split lines by keyword
+        facet_col="Keyword",
+        facet_col_wrap=num_cols,
         markers=True,
         title="Average Daily Sentiment Score by Keyword"
     )
-    line_fig.update_layout(xaxis_title="Date", yaxis_title="Average Sentiment Score")
+
+    line_fig.update_layout(
+        # xaxis=dict(
+        #     rangeselector=dict(
+        #         buttons=list([
+        #             dict(count=7, label="1w", step="day", stepmode="backward"),
+        #             dict(count=1, label="1m", step="month", stepmode="backward"),
+        #             dict(step="all")
+        #         ])
+        #     ),
+        #     rangeslider=dict(visible=True),
+        #     type="date"
+        # ),
+        height = num_rows * height_per_row,  # Set height based on number of rows
+    )
     st.plotly_chart(line_fig, use_container_width=True)
+
+    # Heatmap of Sentiment Scores
+    heatmap_df = (
+        filtered_df.groupby(["Timestamp", "Keyword"])["Sentiment_Score"]
+        .mean().unstack()
+    )
+    st.markdown("### 🔥 Sentiment Heatmap")
+    if not heatmap_df.empty:
+        # Set up the figure
+        plt.figure(figsize=(15, 10))  # adjust width/height as needed
+
+        # Create heatmap
+        ax = sns.heatmap(
+            heatmap_df,
+            cmap="RdYlGn",  # or 'vlag', 'coolwarm', etc.
+            linecolor='gray',
+            annot=False,  # You can turn this True to show values
+            cbar_kws={'label': 'Avg Sentiment Score'},
+            center=0
+        )
+
+        # Title and labels
+        plt.title("🔥 Sentiment Heatmap by Keyword and Date", fontsize=14)
+        plt.xlabel("Date")
+        plt.ylabel("Keyword")
+        plt.xticks(rotation=45, ha='right')
+
+        # Show in Streamlit
+        st.pyplot(plt)
+    else:
+        st.warning("No data available for the heatmap.")
+        st.stop()
 
     # Top Positive and Negative Posts
     st.markdown("### 🔼 Top 5 Positive Posts")
