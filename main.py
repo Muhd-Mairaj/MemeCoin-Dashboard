@@ -164,6 +164,7 @@ elif page == "1. Sentiment Analysis":
         filtered_df.groupby(["Timestamp", "Keyword"])["Sentiment_Score"]
         .mean().unstack()
     )
+
     st.markdown("### 🔥 Sentiment Heatmap")
     if not heatmap_df.empty:
         # Set up the figure
@@ -1599,7 +1600,7 @@ elif page == "6. Raw Data Explorer":
     # Trend Tab
     # ------------------- #
     with tab2:
-        st.subheader("Trend Data Explorer")
+        st.subheader("Search Trend Data Explorer")
 
         # Example trend_df columns: ['Timestamp', 'Keyword', 'Volume', 'Price']
         trend_keywords = sorted(trend_df["Keyword"].unique())
@@ -1643,3 +1644,42 @@ elif page == "6. Raw Data Explorer":
             use_container_width=False,
             height=500,
         )
+
+    # ------------------- #
+    # Price Data Tab
+    # ------------------- #
+    with tab3:
+        st.subheader("Generated Price Data")
+        sentiment_df = load_sentiment_data()
+        trends_df = load_trends_data()
+        price_df = create_sample_price_data(sentiment_df, trends_df)
+        combined_df = combine_all_data(price_df, sentiment_df, trends_df)
+
+        st.write(f"Showing {len(combined_df)} records")
+        print(combined_df.head())
+
+        st.dataframe(combined_df, use_container_width=True)
+
+        # Download option
+        csv = combined_df.to_csv(index=False)
+        st.download_button("Download Combined Data", csv, "combined_data.csv", "text/csv")
+
+        # Data summary
+        st.subheader("📊 Data Summary")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Total Records", len(combined_df))
+
+        with col2:
+            st.metric(
+                "Date Range",
+                f"{(combined_df['Date'].max() - combined_df['Date'].min()).days} days",
+            )
+
+        with col3:
+            st.metric("Avg Price", f"${combined_df['Close'].mean():.4f}")
+
+        with col4:
+            st.metric("Price Volatility", f"{combined_df['Close'].std():.4f}")
