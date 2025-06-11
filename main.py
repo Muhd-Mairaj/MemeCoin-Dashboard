@@ -397,7 +397,7 @@ elif page == "3. Price Correlation":
                 y=sentiment_available['close'],
                 mode='markers',
                 name='Has Sentiment Data',
-                marker=dict(color='green', size=3)
+                marker=dict(color='green', size=5, symbol='x')
             ))
 
         trends_available = availability_df[availability_df['Has_Trends']]
